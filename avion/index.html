@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Choisissez votre classe, votre place et votre siège dans un avion en 3D, puis recevez votre carte d'embarquement.">
+<title>Mirava Seat Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene" aria-label="Avion en 3D. La liste des classes permet aussi de choisir au clavier."></canvas>
+
+<header class="top">
+  <a class="brand" href="./" aria-label="Mirava, accueil">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5V18l-2 1.5V21l3.5-1 3.5 1v-1.5L13 18v-5z" fill="currentColor"/></svg>
+    <span>Mirava</span>
+  </a>
+  <p class="fixture"><b>MV 210 Casablanca → New York</b><span>Ven. 18 déc., départ 10:40</span></p>
+</header>
+
+<aside class="panel intro" id="intro" aria-label="Choisir une classe">
+  <h1>Choisissez votre classe</h1>
+  <div class="route" aria-label="Casablanca 10:40, New York 12:45, 8 h 05 sans escale">
+    <div><b>CMN</b><span>10:40</span></div>
+    <div class="leg"><i></i><span>8 h 05, sans escale</span></div>
+    <div class="r"><b>JFK</b><span>12:45</span></div>
+  </div>
+  <ul class="classes">
+    <li><button type="button" data-cabin="eco" style="--c:#3d7bd9"><i class="sw"></i><span><small>Classe 01</small>Économie</span><b>dès 420 €</b><em data-left="eco"></em></button></li>
+    <li><button type="button" data-cabin="prem" style="--c:#1fb3a2"><i class="sw"></i><span><small>Classe 02</small>Premium Économie</span><b>dès 890 €</b><em data-left="prem"></em></button></li>
+    <li><button type="button" data-cabin="biz" style="--c:#8b6be0"><i class="sw"></i><span><small>Classe 03</small>Affaires</span><b>dès 2 650 €</b><em data-left="biz"></em></button></li>
+    <li><button type="button" data-cabin="first" style="--c:#d9a845"><i class="sw"></i><span><small>Classe 04</small>Première</span><b>dès 6 900 €</b><em data-left="first"></em></button></li>
+  </ul>
+  <p class="note">Touchez une cabine sur l'avion ou dans la liste. Faites glisser pour tourner autour. Vol, prix et disponibilités fictifs.</p>
+</aside>
+
+<aside class="panel sheet" id="sheet" hidden aria-label="Détails de la cabine">
+  <div class="sh-head">
+    <div><p class="crumb" id="sh-no"></p><h2 id="sh-name"></h2></div>
+    <button type="button" class="icon" id="sh-close" aria-label="Revenir à l'avion"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+  <p class="desc" id="sh-desc"></p>
+  <dl class="facts">
+    <div><dt>Dès</dt><dd id="sh-price"></dd></div>
+    <div><dt>Libres</dt><dd id="sh-left"></dd></div>
+    <div><dt>Rangs</dt><dd id="sh-rows"></dd></div>
+  </dl>
+  <h3 id="pref-label">Votre place</h3>
+  <div class="chips" id="prefs" role="group" aria-labelledby="pref-label"></div>
+  <div class="qty"><span id="qty-label">Voyageurs</span>
+    <div class="stepper"><button type="button" id="q-minus" aria-label="Moins de voyageurs">−</button><output id="qty" aria-labelledby="qty-label">1</output><button type="button" id="q-plus" aria-label="Plus de voyageurs">+</button></div>
+  </div>
+  <button type="button" class="btn primary" id="best">Trouver le meilleur siège</button>
+  <button type="button" class="btn ghost" id="view">Voir depuis un siège</button>
+  <h3>Vos sièges</h3>
+  <ul class="mine" id="mine"></ul>
+  <p class="legend"><span><i class="dot free" id="dot-free"></i>Libre</span><span><i class="dot taken"></i>Occupé</span><span><i class="dot yours"></i>Le vôtre</span></p>
+</aside>
+
+<section class="pass-wrap" id="pass" hidden aria-live="polite"></section>
+
+<div class="panel seatbar" id="seatbar" hidden>
+  <p><small>Vue depuis le siège</small><b id="sb-label"></b><span class="note">Faites glisser pour regarder autour</span></p>
+  <div class="sb-actions"><button type="button" class="btn primary" id="sb-add">Ajouter ce siège</button><button type="button" class="btn ghost" id="sb-back">Retour à la cabine</button></div>
+</div>
+
+<div class="basket" id="basket" hidden>
+  <div><b id="bk-count">1 siège</b><span id="bk-total">0 €</span></div>
+  <button type="button" class="btn primary" id="bk-go">Réserver</button>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="modal" id="checkout" hidden role="dialog" aria-modal="true" aria-labelledby="co-title">
+  <div class="modal-card">
+    <section id="co-step1">
+      <h2 id="co-title">Votre réservation</h2>
+      <p class="sub">Vol MV 210 Casablanca → New York, ven. 18 déc., départ 10:40</p>
+      <ul class="lines" id="co-lines"></ul>
+      <dl class="sum"><div class="total"><dt>Total</dt><dd id="co-total"></dd></div></dl>
+      <p class="note small">Taxes et frais inclus. Bagage cabine de 10 kg compris.</p>
+      <div class="row"><button type="button" class="btn ghost" data-close>Continuer à choisir</button><button type="button" class="btn primary" id="co-reserve">Confirmer</button></div>
+      <p class="note">Réservation de démonstration : aucun paiement n'est demandé.</p>
+    </section>
+    <section id="co-step2" hidden>
+      <h2>Bon voyage</h2>
+      <p class="sub">Réservation <b id="co-ref"></b>. Présentez ces cartes à la porte d'embarquement.</p>
+      <div class="passes" id="co-passes"></div>
+      <div class="row one"><button type="button" class="btn primary" data-close>Terminé</button></div>
+    </section>
+  </div>
+</div>
+
+<div class="loader" id="loader"><div class="ring"></div><p>Préparation de l'avion…</p></div>
+<noscript><p class="nojs">Ce plan de cabine a besoin de JavaScript et de WebGL.</p></noscript>
+
+<script>
+  setTimeout(function () {
+    if (!window.__planeReady) {
+      var p = document.querySelector('#loader p');
+      if (p) p.textContent = "L'avion met du temps à charger. Vérifiez la connexion, ou essayez un navigateur compatible WebGL.";
+    }
+  }, 15000);
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
