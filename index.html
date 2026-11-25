@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Pick your seat in 3D: choose a section of Redvale Park, see the view from your seat and reserve tickets.">
+<title>Redvale Park Tickets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene" aria-label="3D stadium seating map. Use the section list for keyboard access."></canvas>
+
+<header class="top">
+  <a class="brand" href="./" aria-label="Redvale Park tickets">
+    <svg viewBox="0 0 30 20" aria-hidden="true"><path d="M2 2h26v5a3 3 0 0 0 0 6v5H2v-5a3 3 0 0 0 0-6z" fill="#e0173f"/><path d="M20 4v12" stroke="#fff" stroke-width="1.4" stroke-dasharray="1.6 1.6"/></svg>
+    <span>Redvale Park</span>
+  </a>
+  <p class="fixture"><b>Redvale City v Harbour Town</b><span>Sat 28 Nov, 20:00</span></p>
+</header>
+
+<aside class="panel intro" id="intro" aria-label="Choose a section">
+  <h1>Choose your seats</h1>
+  <p class="lede">Tap any section of the stadium to see its price, the best seats left and the view from them.</p>
+  <ul class="tiers">
+    <li><button type="button" data-tier="lower" aria-pressed="false">
+      <svg viewBox="0 0 34 22" aria-hidden="true"><path class="o" d="M20 2h12v8H20zM14 11h6v3h-6z"/><path class="on" d="M2 20h12v-6H8v2H2z"/></svg>
+      <span>Lower tier</span><b>from £48</b></button></li>
+    <li><button type="button" data-tier="club" aria-pressed="false">
+      <svg viewBox="0 0 34 22" aria-hidden="true"><path class="o" d="M20 2h12v8H20zM2 20h12v-6H8v2H2z"/><path class="on" d="M14 11h6v3h-6z"/></svg>
+      <span>Club boxes</span><b>from £240</b></button></li>
+    <li><button type="button" data-tier="upper" aria-pressed="false">
+      <svg viewBox="0 0 34 22" aria-hidden="true"><path class="o" d="M14 11h6v3h-6zM2 20h12v-6H8v2H2z"/><path class="on" d="M20 2h12v8H20z"/></svg>
+      <span>Upper tier</span><b>from £34</b></button></li>
+  </ul>
+  <label class="jump"><span>Or pick from the list</span><select id="jump"><option value="">Jump to a section</option></select></label>
+  <p class="note">Drag to turn the stadium, scroll or pinch to zoom. Sample fixture, prices and availability.</p>
+</aside>
+
+<aside class="panel sheet" id="sheet" hidden aria-label="Section details">
+  <div class="sh-head">
+    <div><p class="crumb" id="sh-crumb"></p><h2><small>Section</small><span id="sh-id"></span></h2></div>
+    <button type="button" class="icon" id="sh-close" aria-label="Back to the stadium"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+  <dl class="facts">
+    <div><dt>Per seat</dt><dd id="sh-price"></dd></div>
+    <div><dt>Seats left</dt><dd id="sh-left"></dd></div>
+    <div><dt>Rows</dt><dd id="sh-rows"></dd></div>
+  </dl>
+  <div class="qty"><span id="qty-label">How many seats?</span>
+    <div class="stepper"><button type="button" id="q-minus" aria-label="Fewer seats">−</button><output id="qty" aria-labelledby="qty-label">2</output><button type="button" id="q-plus" aria-label="More seats">+</button></div>
+  </div>
+  <button type="button" class="btn primary" id="best">Find the best 2 together</button>
+  <button type="button" class="btn ghost" id="view">View from seat</button>
+  <h3>Your seats in this section</h3>
+  <ul class="mine" id="mine"></ul>
+  <p class="legend"><span><i class="dot free"></i>Free</span><span><i class="dot taken"></i>Taken</span><span><i class="dot yours"></i>Yours</span></p>
+</aside>
+
+<div class="panel seatbar" id="seatbar" hidden>
+  <p><small>View from</small><b id="sb-label"></b><span class="note">Drag to look around</span></p>
+  <div class="sb-actions"><button type="button" class="btn primary" id="sb-add">Add this seat</button><button type="button" class="btn ghost" id="sb-back">Back to section</button></div>
+</div>
+
+<div class="basket" id="basket" hidden>
+  <div><b id="bk-count">0 seats</b><span><span id="bk-total">£0</span> plus booking fee</span></div>
+  <button type="button" class="btn primary" id="bk-go">Checkout</button>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="modal" id="checkout" hidden role="dialog" aria-modal="true" aria-labelledby="co-title">
+  <div class="modal-card">
+    <section id="co-step1">
+      <h2 id="co-title">Your tickets</h2>
+      <p class="sub">Redvale City v Harbour Town at Redvale Park, Sat 28 Nov, 20:00</p>
+      <ul class="lines" id="co-lines"></ul>
+      <dl class="sum">
+        <div><dt>Tickets</dt><dd id="co-sub"></dd></div>
+        <div><dt id="co-feelabel">Booking fee</dt><dd id="co-fee"></dd></div>
+        <div class="total"><dt>Total</dt><dd id="co-total"></dd></div>
+      </dl>
+      <div class="row"><button type="button" class="btn ghost" data-close>Keep choosing</button><button type="button" class="btn primary" id="co-reserve">Reserve seats</button></div>
+      <p class="note">Demo booking: no payment is taken.</p>
+    </section>
+    <section id="co-step2" hidden>
+      <h2>You're in</h2>
+      <p class="sub">Booking <b id="co-ref"></b>. Show these at the turnstile.</p>
+      <div class="tickets" id="co-tickets"></div>
+      <div class="row one"><button type="button" class="btn primary" data-close>Done</button></div>
+    </section>
+  </div>
+</div>
+
+<div class="loader" id="loader"><div class="ring"></div><p>Building the stadium…</p></div>
+<noscript><p class="nojs">This seat map needs JavaScript and WebGL.</p></noscript>
+
+<script>
+  setTimeout(function () {
+    if (!window.__stadiumReady) {
+      var p = document.querySelector('#loader p');
+      if (p) p.textContent = 'Still loading the 3D stadium. Check your connection, or try another browser with WebGL.';
+    }
+  }, 15000);
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
